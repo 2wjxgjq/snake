@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>贪吃蛇小游戏</title>
+    <style>
+        /* 确保页面没有边距和填充 */
+        body, html {
+            margin: 0;
+            padding: 0;
+            overflow: hidden; /* 隐藏滚动条 */
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: #000;
+        }
+
+        /* 画布样式 */
+        canvas {
+            background-color: #000;
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="gameCanvas"></canvas>
+    <script>
+        const canvas = document.getElementById("gameCanvas");
+        const ctx = canvas.getContext("2d");
+
+        // 动态调整画布大小
+        function resizeCanvas() {
+            const size = Math.min(window.innerWidth, window.innerHeight) * 0.9; // 画布大小为视口的 90%
+            canvas.width = size;
+            canvas.height = size;
+        }
+
+        // 初始化时调整画布大小
+        resizeCanvas();
+
+        // 监听窗口大小变化
+        window.addEventListener("resize", resizeCanvas);
+
+        const gridSize = 20; // 每个格子的大小
+        let tileCount = canvas.width / gridSize; // 每行/列的格子数量
+
+        let snake = [{ x: 10, y: 10 }]; // 初始蛇的位置
+        let food = { x: 5, y: 5 }; // 食物的位置
+        let direction = { x: 1, y: 0 }; // 初始方向：向右移动
+        let score = 0;
+        let isGameOver = false;
+
+        function gameLoop() {
+            update();
+            draw();
+            if (!isGameOver) {
+                setTimeout(gameLoop, 200); // 控制蛇的速度
+            }
+        }
+
+        function update() {
+            if (isGameOver) return; // 如果游戏结束，停止更新
+
+            // 更新蛇的位置
+            const head = { x: snake[0].x + direction.x, y: snake[0].y + direction.y };
+
+            // 检测是否撞墙或撞到自己
+            if (
+                head.x < 0 || head.x >= tileCount ||
+                head.y < 0 || head.y >= tileCount ||
+                snake.some(segment => segment.x === head.x && segment.y === head.y)
+            ) {
+                isGameOver = true; // 设置游戏结束状态
+                return;
+            }
+
+            snake.unshift(head); // 添加新头部
+
+            // 检测是否吃到食物
+            if (head.x === food.x && head.y === food.y) {
+                score++;
+                placeFood();
+            } else {
+                snake.pop(); // 移除尾部
+            }
+        }
+
+        function draw() {
+            // 清空画布
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // 绘制背景网格
+            drawGrid();
+
+            // 绘制蛇
+            ctx.fillStyle = "lime";
+            snake.forEach(segment => {
+                ctx.fillRect(segment.x * gridSize, segment.y * gridSize, gridSize, gridSize);
+            });
+
+            // 绘制食物22
+            ctx.fillStyle = "red";
+            ctx.fillRect(food.x * gridSize, food.y * gridSize, gridSize, gridSize);
+
+            // 绘制分数
+            ctx.fillStyle = "white";
+            ctx.font = "20px Arial";
+            ctx.fillText("得分: " + score, 30, 30);
+
+            // 如果游戏结束，绘制结束画面
+            if (isGameOver) {
+                drawGameOver();
+            }
+        }
+
+        function drawGrid() {
+            ctx.strokeStyle = "#333"; // 网格线颜色
+            ctx.lineWidth = 1; // 网格线宽度
+
+            // 绘制垂直线
+            for (let i = 0; i < tileCount; i++) {
+                ctx.beginPath();
+                ctx.moveTo(i * gridSize, 0);
+                ctx.lineTo(i * gridSize, canvas.height);
+                ctx.stroke();
+            }
+
+            // 绘制水平线
+            for (let j = 0; j < tileCount; j++) {
+                ctx.beginPath();
+                ctx.moveTo(0, j * gridSize);
+                ctx.lineTo(canvas.width, j * gridSize);
+                ctx.stroke();
+            }
+        }
+
+        function drawGameOver() {
+            // 绘制半透明遮罩层
+            ctx.fillStyle = "rgba(0, 0, 0, 0.7)";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // 绘制游戏结束文字
+            
+            ctx.fillStyle = "red"; // 修改为红色
+            ctx.font = "40px Arial";
+            ctx.textAlign = "center";
+            ctx.fillText("游戏结束", canvas.width / 2, canvas.height / 2 - 20);
+
+            // 绘制得分
+             // 绘制得分（白色）
+             ctx.fillStyle = "white"; // 得分保持白色
+            ctx.font = "30px Arial";
+            ctx.fillText("得分: " + score, canvas.width / 2, canvas.height / 2 + 30);
+
+            // 绘制提示信息
+            ctx.font = "20px Arial";
+            ctx.fillText("按空格键重新开始", canvas.width / 2, canvas.height / 2 + 80);
+        }
+
+        function placeFood() {
+            let newFoodPosition;
+            do {
+                newFoodPosition = {
+                    x: Math.floor(Math.random() * tileCount),
+                    y: Math.floor(Math.random() * tileCount)
+                };
+            } while (snake.some(segment => segment.x === newFoodPosition.x && segment.y === newFoodPosition.y)); // 确保食物不会生成在蛇身上
+            food = newFoodPosition;
+        }
+
+        function resetGame() {
+            snake = [{ x: 10, y: 10 }];
+            direction = { x: 1, y: 0 }; // 重置方向为向右
+            score = 0;
+            isGameOver = false;
+            placeFood();
+            gameLoop(); // 重新启动游戏循环
+        }
+
+        // 监听键盘事件
+        document.addEventListener("keydown", e => {
+            if (isGameOver && e.key === " ") { // 按下空格键且游戏已结束
+                resetGame();
+                return;
+            }
+
+            switch (e.key) {
+                case "ArrowUp":
+                    if (direction.y === 0) direction = { x: 0, y: -1 }; // 不能直接反向移动
+                    break;
+                case "ArrowDown":
+                    if (direction.y === 0) direction = { x: 0, y: 1 };
+                    break;
+                case "ArrowLeft":
+                    if (direction.x === 0) direction = { x: -1, y: 0 };
+                    break;
+                case "ArrowRight":
+                    if (direction.x === 0) direction = { x: 1, y: 0 };
+                    break;
+            }
+        });
+
+        placeFood();
+        gameLoop();
+    </script>
+</body>
+</html>
